@@ -13,6 +13,8 @@ import datetime
 import argparse
 import re
 from datetime import timedelta
+import codecs
+
 
 def get_date_from(string_value):
     if (match := re.match(r'^(.*?)-->', string_value)):
@@ -54,7 +56,8 @@ def convert_time(time_to_convert: datetime, time_table, checkIndexInTimetable: b
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process and resynchronize time stamps according to a time-translation table')
     parser.add_argument('timetable_file', help='Time translation table')
-    parser.add_argument('toprocess_file', help='File containing the timestamps to resynchronize')
+    parser.add_argument('input_file', help='File containing the timestamps to resynchronize')
+    parser.add_argument('output_file', help='Output file')
     parser.add_argument('-v', '--verbose', action="store_true", help='Prinout verbose')
 
     args = parser.parse_args()
@@ -76,18 +79,26 @@ if __name__ == '__main__':
 
     # Update timestamps and re-write it to the console
     _index_time_table = 0
-    with open(args.toprocess_file, 'r', encoding='utf16') as f:
-        for line in f:
-            read_line = line.strip()
+    inputFile = codecs.open(args.input_file, 'r', 'cp1251')
+    outputFile = codecs.open(args.output_file, 'w', 'cp1251')
 
-            if '-->' in read_line:
-                date1 = get_date_from(read_line)
-                newBeginTimeSpan = convert_time(date1, time_table, True)
+    while (read_line := inputFile.readline()):
+        
+        if '-->' in read_line:
+            date1 = get_date_from(read_line)
+            newBeginTimeSpan = convert_time(date1, time_table, True)
 
-                date2 = get_date_to(read_line)
-                newEndTimespan = convert_time(date2, time_table, False)
+            date2 = get_date_to(read_line)
+            newEndTimespan = convert_time(date2, time_table, False)
 
-                print(newBeginTimeSpan.strftime('%H:%M:%S,%f')[:-3] + " --> " + newEndTimespan.strftime('%H:%M:%S,%f')[:-3])
-            else:
-                print(line, end = '')
-                pass  # do nothing with the line
+            outputFile.write(newBeginTimeSpan.strftime('%H:%M:%S,%f')[:-3] + " --> " + newEndTimespan.strftime('%H:%M:%S,%f')[:-3])
+            outputFile.write('\r\n')
+        else:
+            outputFile.write(read_line)
+            pass  # do nothing with the line
+        
+    inputFile.close()
+    outputFile.close()
+
+
+    
